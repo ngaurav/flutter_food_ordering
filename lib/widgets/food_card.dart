@@ -133,6 +133,6 @@ class _FoodCardState extends State<FoodCard> {
     );
     Scaffold.of(context).showSnackBar(snackBar);
     CartModel cartModel = CartModel(food: food, quantity: 1);
-    Provider.of<Cart>(context).addItem(cartModel);
+    Provider.of<Cart>(context, listen: false).addItem(cartModel);
   }
 }
