@@ -1,10 +1,8 @@
-import 'dart:ui';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_food_ordering/constants/values.dart';
+import 'package:flutter_food_ordering/constants/colors.dart';
 import 'package:flutter_food_ordering/model/cart_model.dart';
+import 'package:flutter_food_ordering/model/food_model.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -12,79 +10,48 @@ class CheckOutPage extends StatefulWidget {
   _CheckOutPageState createState() => _CheckOutPageState();
 }
 
-class _CheckOutPageState extends State<CheckOutPage>
-    with SingleTickerProviderStateMixin {
+class _CheckOutPageState extends State<CheckOutPage> {
+  var titleStyle = TextStyle(fontSize: 22, fontWeight: FontWeight.bold);
   var now = DateTime.now();
   get weekDay => DateFormat('EEEE').format(now);
   get day => DateFormat('dd').format(now);
   get month => DateFormat('MMMM').format(now);
-  double oldTotal = 0;
-  double total = 0;
+
+  List<Food> displayList = [];
 
   ScrollController scrollController = ScrollController();
-  late AnimationController animationController;
-
-  onCheckOutClick(MyCart cart) async {
-    try {
-      List<Map> data = List.generate(cart.cartItems.length, (index) {
-        return {
-          "id": cart.cartItems[index].food.id,
-          "quantity": cart.cartItems[index].quantity
-        };
-      }).toList();
-
-      var response = await Dio().post('$BASE_URL/api/order/food',
-          queryParameters: {"token": token}, data: data);
-      print(response.data);
-
-      if (response.data['status'] == 1) {
-        cart.clearCart();
-        Navigator.of(context).pop();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(response.data['message']),
-          behavior: SnackBarBehavior.floating,
-        ));
-      }
-    } catch (ex) {
-      print(ex.toString());
-    }
-  }
-
-  @override
-  void initState() {
-    animationController =
-        AnimationController(vsync: this, duration: Duration(milliseconds: 200))
-          ..forward();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    animationController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    var cart = Provider.of<MyCart>(context);
+    var cart = Provider.of<Cart>(context);
+    displayList.clear();
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: mainColor,
-        title: Text('CheckOut'),
-        centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.black),
-        titleTextStyle: TextStyle(
-            color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-      ),
       body: SingleChildScrollView(
+        controller: scrollController,
+        physics: BouncingScrollPhysics(),
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              ...buildHeader(),
-              //cart items list
+              SizedBox(height: 16),
+              SafeArea(
+                child: InkWell(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Icon(Icons.arrow_back_ios)),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Text('Cart', style: titleStyle),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 32.0, horizontal: 0),
+                child: Text('$weekDay, ${day}th of $month ', style: titleStyle),
+              ),
+              FlatButton(
+                child: Text('+ Add to order'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
               ListView.builder(
                 itemCount: cart.cartItems.length,
                 shrinkWrap: true,
@@ -93,8 +60,6 @@ class _CheckOutPageState extends State<CheckOutPage>
                   return buildCartItemList(cart, cart.cartItems[index]);
                 },
               ),
-              SizedBox(height: 16),
-              Divider(),
               buildPriceInfo(cart),
               checkoutButton(cart, context),
             ],
@@ -104,157 +69,117 @@ class _CheckOutPageState extends State<CheckOutPage>
     );
   }
 
-  List<Widget> buildHeader() {
-    return [
-      Padding(
-        padding: const EdgeInsets.only(top: 24.0),
-        child: Text('Cart', style: headerStyle),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 0),
-        child: Text('$weekDay, ${day}th of $month ', style: headerStyle),
-      ),
-      TextButton(
-        child: Text('+ Add to order'),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-    ];
-  }
-
-  Widget buildPriceInfo(MyCart cart) {
-    oldTotal = total;
-    total = 0;
-    for (CartItem cart in cart.cartItems) {
+  Widget buildPriceInfo(Cart cart) {
+    final titleStyle2 = TextStyle(fontSize: 18, color: Colors.black45);
+    double total = 0;
+    for (CartModel cart in cart.cartItems) {
       total += cart.food.price * cart.quantity;
     }
-    //oldTotal = total;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
-        Text('Total:', style: headerStyle),
-        AnimatedBuilder(
-          animation: animationController,
-          builder: (context, child) {
-            return Text(
-                '\$ ${lerpDouble(oldTotal, total, animationController.value)!.toStringAsFixed(2)}',
-                style: headerStyle);
-          },
-        ),
+        Text('Total:', style: titleStyle2),
+        Text('\$ ${total.toStringAsFixed(2)}', style: titleStyle),
       ],
     );
   }
 
-  Widget checkoutButton(MyCart cart, context) {
+  Widget checkoutButton(cart, context) {
+    final titleStyle1 = TextStyle(fontSize: 16);
     return Container(
-      margin: EdgeInsets.only(top: 24, bottom: 64),
-      width: double.infinity,
-      child: RaisedButton(
-        child: Text('Checkout', style: titleStyle),
-        onPressed: () {
-          onCheckOutClick(cart);
-        },
-        padding: EdgeInsets.symmetric(horizontal: 64, vertical: 12),
-        color: mainColor,
-        shape: StadiumBorder(),
+      margin: EdgeInsets.only(top: 16, bottom: 64),
+      child: Center(
+        child: RaisedButton(
+          child: Text('Checkout', style: titleStyle1),
+          onPressed: () {},
+          padding: EdgeInsets.symmetric(horizontal: 64, vertical: 12),
+          color: mainColor,
+          shape: StadiumBorder(),
+        ),
       ),
     );
   }
 
-  Widget buildCartItemList(MyCart cart, CartItem cartModel) {
-    return Card(
+  Widget buildCartItemList(Cart cart, CartModel cartModel) {
+    var titleStyle = TextStyle(fontSize: 16, fontWeight: FontWeight.bold);
+    return Container(
       margin: EdgeInsets.only(bottom: 16),
-      child: Container(
-        height: 100,
-        padding: EdgeInsets.all(8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(6)),
-              child: Image.network(
-                '$BASE_URL/uploads/${cartModel.food.images[0]}',
-                fit: BoxFit.cover,
-                width: 100,
-                height: 100,
-              ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Flexible(
+            flex: 3,
+            fit: FlexFit.tight,
+            child: ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+              child: Image.network(cartModel.food.image),
             ),
-            Flexible(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Container(
-                    height: 45,
-                    child: Text(
-                      cartModel.food.name,
-                      style: titleStyle,
-                      textAlign: TextAlign.center,
-                    ),
+          ),
+          Flexible(
+            flex: 5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Container(
+                  height: 50,
+                  child: Text(
+                    cartModel.food.name,
+                    style: titleStyle,
+                    textAlign: TextAlign.center,
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      InkWell(
-                        customBorder: roundedRectangle4,
-                        onTap: () {
-                          cart.decreaseItem(cartModel);
-                          animationController.reset();
-                          animationController.forward();
-                        },
-                        child: Icon(Icons.remove_circle),
-                      ),
-                      Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 16.0, vertical: 2),
-                        child: Text('${cartModel.quantity}', style: titleStyle),
-                      ),
-                      InkWell(
-                        customBorder: roundedRectangle4,
-                        onTap: () {
-                          cart.increaseItem(cartModel);
-                          animationController.reset();
-                          animationController.forward();
-                        },
-                        child: Icon(Icons.add_circle),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-            Flexible(
-              flex: 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Container(
-                    height: 45,
-                    width: 70,
-                    child: Text(
-                      '\$ ${cartModel.food.price}',
-                      style: titleStyle,
-                      textAlign: TextAlign.end,
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    InkWell(
+                      onTap: () => cart.removeItem(cartModel),
+                      child: Icon(Icons.remove_circle),
                     ),
-                  ),
-                  InkWell(
-                    onTap: () {
-                      cart.removeAllInCart(cartModel.food);
-                      animationController.reset();
-                      animationController.forward();
-                    },
-                    customBorder: roundedRectangle12,
-                    child: Icon(Icons.delete_sweep, color: Colors.red),
-                  )
-                ],
-              ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text('${cartModel.quantity}', style: titleStyle),
+                    ),
+                    InkWell(
+                      onTap: () => cart.increaseItem(cartModel),
+                      child: Icon(Icons.add_circle),
+                    ),
+                  ],
+                )
+              ],
             ),
-          ],
-        ),
+          ),
+          Flexible(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Container(
+                  height: 40,
+                  width: 70,
+                  child: Text(
+                    '\$ ${cartModel.food.price}',
+                    style: titleStyle,
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+                Card(
+                  shape: roundedRectangle,
+                  color: mainColor,
+                  child: InkWell(
+                    onTap: () => cart.removeAllInList(cartModel.food),
+                    customBorder: roundedRectangle,
+                    child: Icon(Icons.close),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

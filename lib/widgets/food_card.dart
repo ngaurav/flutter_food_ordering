@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_food_ordering/constants/values.dart';
+import 'package:flutter_food_ordering/constants/colors.dart';
 import 'package:flutter_food_ordering/main.dart';
 import 'package:flutter_food_ordering/model/cart_model.dart';
 import 'package:flutter_food_ordering/model/food_model.dart';
-import 'package:flutter_food_ordering/widgets/cart_bottom_sheet.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -14,58 +13,32 @@ class FoodCard extends StatefulWidget {
   _FoodCardState createState() => _FoodCardState();
 }
 
-class _FoodCardState extends State<FoodCard>
-    with SingleTickerProviderStateMixin {
+class _FoodCardState extends State<FoodCard> {
   Food get food => widget.food;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      child: Card(
-        shape: roundedRectangle12,
-        child: Stack(
-          children: <Widget>[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                buildImage(),
-                buildTitle(),
-                buildRating(),
-                buildPriceInfo(),
-              ],
-            ),
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                padding: EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: mainColor,
-                  borderRadius:
-                      BorderRadius.only(topRight: Radius.circular(12)),
-                ),
-                child: Text(food.shop.name),
-              ),
-            )
-          ],
-        ),
+      child: Column(
+        children: <Widget>[
+          buildImage(),
+          buildTitle(),
+          buildRating(),
+          buildPriceInfo(),
+        ],
       ),
     );
   }
 
   Widget buildImage() {
-    return Container(
-      height: MediaQuery.of(context).size.width / 2.5,
+    return Card(
+      shape: roundedRectangle,
       child: ClipRRect(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
         child: Image.network(
-          '$BASE_URL/uploads/${food.images[0]}',
-          fit: BoxFit.cover,
+          food.image,
+          fit: BoxFit.fill,
+          height: 100,
           loadingBuilder: (context, Widget child, ImageChunkEvent? progress) {
             if (progress == null) return child;
             return Center(
@@ -86,30 +59,20 @@ class _FoodCardState extends State<FoodCard>
 
   Widget buildTitle() {
     return Container(
-      padding: const EdgeInsets.only(left: 8, right: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            food.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: titleStyle,
-          ),
-          Text(
-            food.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: infoStyle,
-          ),
-        ],
+      height: 60,
+      padding: const EdgeInsets.only(top: 12.0, left: 8, right: 16),
+      child: Text(
+        food.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
     );
   }
 
   Widget buildRating() {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 8),
+      padding: const EdgeInsets.only(top: 12.0, left: 4, right: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -128,7 +91,7 @@ class _FoodCardState extends State<FoodCard>
                 full: Icon(Icons.star_rounded, color: mainColor)),
             onRatingUpdate: (rating) {},
           ),
-          Text('(${food.rating})'),
+          Text('(${food.rateCount})'),
         ],
       ),
     );
@@ -136,23 +99,25 @@ class _FoodCardState extends State<FoodCard>
 
   Widget buildPriceInfo() {
     return Padding(
-      padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+      padding: const EdgeInsets.only(top: 12.0, left: 8, right: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Text(
             '\$ ${food.price}',
-            style: titleStyle,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
           Card(
-            margin: EdgeInsets.only(right: 0),
-            shape: roundedRectangle4,
+            margin: EdgeInsets.only(right: 8),
+            shape: roundedRectangle,
             color: mainColor,
             child: InkWell(
               onTap: addItemToCard,
-              splashColor: Colors.white70,
-              customBorder: roundedRectangle4,
+              customBorder: roundedRectangle,
               child: Icon(Icons.add),
             ),
           )
@@ -162,33 +127,12 @@ class _FoodCardState extends State<FoodCard>
   }
 
   addItemToCard() {
-    bool isAddSuccess =
-        Provider.of<MyCart>(context).addItem(CartItem(food: food, quantity: 1));
-
-    if (isAddSuccess) {
-      final snackBar = SnackBar(
-        content: Text('${food.name} added to cart'),
-        action: SnackBarAction(
-          label: 'view',
-          onPressed: showCart,
-        ),
-        duration: Duration(milliseconds: 1500),
-      );
-      Scaffold.of(context).showSnackBar(snackBar);
-    } else {
-      final snackBar = SnackBar(
-        content: Text('You can\'t order from multiple shop at the same time'),
-        duration: Duration(milliseconds: 1500),
-      );
-      Scaffold.of(context).showSnackBar(snackBar);
-    }
-  }
-
-  showCart() {
-    showModalBottomSheet(
-      shape: roundedRectangle40,
-      context: context,
-      builder: (context) => CartBottomSheet(),
+    final snackBar = SnackBar(
+      content: Text('${food.name} added to cart'),
+      duration: Duration(milliseconds: 100),
     );
+    Scaffold.of(context).showSnackBar(snackBar);
+    CartModel cartModel = CartModel(food: food, quantity: 1);
+    Provider.of<Cart>(context).addItem(cartModel);
   }
 }

@@ -1,11 +1,7 @@
-import 'dart:io';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_food_ordering/constants/values.dart';
+import 'package:flutter_food_ordering/constants/colors.dart';
 import 'package:flutter_food_ordering/model/cart_model.dart';
 import 'package:flutter_food_ordering/model/food_model.dart';
-import 'package:flutter_food_ordering/pages/user_profile.dart';
 import 'package:flutter_food_ordering/widgets/cart_bottom_sheet.dart';
 import 'package:flutter_food_ordering/widgets/food_card.dart';
 import 'package:provider/provider.dart';
@@ -16,58 +12,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int value = 1;
-
-  late Future<FoodModel> foodModels;
-
-  Future<FoodModel> fetchAllFoods() async {
-    var dio = Dio();
-    dio.options.connectTimeout = 5000;
-    print('krappa');
-    try {
-      var response = await dio.get('$BASE_URL/api/foods');
-      return FoodModel.fromJson(response.data);
-    } catch (e) {
-      if (e is DioError) {
-        print("Dio Error: " + e.message);
-        throw SocketException(e.message);
-      } else {
-        print("Type error: " + e.toString());
-        throw Exception(e.toString());
-      }
-    }
-  }
+  int value = 0;
 
   showCart() {
     showModalBottomSheet(
-      shape: roundedRectangle40,
+      shape: roundedRectangle32,
       context: context,
       builder: (context) => CartBottomSheet(),
     );
-  }
-
-  viewProfile() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => UserProfilePage()),
-    );
-  }
-
-  @override
-  void initState() {
-    foodModels = fetchAllFoods();
-    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Column(
           children: <Widget>[
             buildAppBar(),
             buildFoodFilter(),
-            Divider(),
             buildFoodList(),
           ],
         ),
@@ -77,21 +40,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget buildAppBar() {
     int items = 0;
-    Provider.of<MyCart>(context).cartItems.forEach((cart) {
+    Provider.of<Cart>(context).cartItems.forEach((cart) {
       items += cart.quantity;
     });
     return SafeArea(
       child: Row(
         children: <Widget>[
-          Text('MENU', style: headerStyle),
+          Text('MENU',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           Spacer(),
-          IconButton(icon: Icon(Icons.person), onPressed: viewProfile),
-          IconButton(
-              icon: Icon(Icons.refresh),
-              onPressed: () {
-                foodModels = fetchAllFoods();
-                setState(() {});
-              }),
+          IconButton(icon: Icon(Icons.search), onPressed: () {}),
           Stack(
             children: <Widget>[
               IconButton(icon: Icon(Icons.shopping_cart), onPressed: showCart),
@@ -122,14 +80,14 @@ class _MyHomePageState extends State<MyHomePage> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         physics: BouncingScrollPhysics(),
-        children: List.generate(FoodTypes.values.length, (index) {
+        children: List.generate(foodTypes.length, (index) {
           return Padding(
             padding: const EdgeInsets.all(8.0),
             child: ChoiceChip(
               selectedColor: mainColor,
               labelStyle: TextStyle(
                   color: value == index ? Colors.white : Colors.black),
-              label: Text(FoodTypes.values[index].toString().split('.').last),
+              label: Text(foodTypes[index]),
               selected: value == index,
               onSelected: (selected) {
                 setState(() {
@@ -145,24 +103,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget buildFoodList() {
     return Expanded(
-      child: FutureBuilder<FoodModel>(
-        future: foodModels,
-        builder: (BuildContext context, snapshot) {
-          if (snapshot.hasData) {
-            return GridView.count(
-              childAspectRatio: 0.65,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              crossAxisCount: 2,
-              physics: BouncingScrollPhysics(),
-              children: snapshot.data!.foods.map((food) {
-                return FoodCard(food);
-              }).toList(),
-            );
-          } else if (snapshot.hasError) {
-            return Center(child: Text(snapshot.error.toString()));
-          }
-          return Center(child: CircularProgressIndicator());
+      child: GridView.builder(
+        itemCount: foods.length,
+        physics: BouncingScrollPhysics(),
+        gridDelegate: new SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 4 / 6,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 16,
+        ),
+        itemBuilder: (context, index) {
+          return FoodCard(foods[index]);
         },
       ),
     );

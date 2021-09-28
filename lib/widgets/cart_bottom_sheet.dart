@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_food_ordering/constants/values.dart';
+import 'package:flutter_food_ordering/constants/colors.dart';
 import 'package:flutter_food_ordering/model/cart_model.dart';
 import 'package:flutter_food_ordering/model/food_model.dart';
 import 'package:flutter_food_ordering/pages/checkout_page.dart';
 import 'package:provider/provider.dart';
 
 class CartBottomSheet extends StatelessWidget {
+  final titleStyle = TextStyle(fontSize: 22, fontWeight: FontWeight.bold);
+  final titleStyle1 = TextStyle(fontSize: 16);
+  final titleStyle2 = TextStyle(fontSize: 18, color: Colors.black45);
+  final titleStyle4 = TextStyle(fontSize: 14, fontWeight: FontWeight.bold);
+
   @override
   Widget build(BuildContext context) {
-    MyCart cart = Provider.of<MyCart>(context);
-
+    Cart cart = Provider.of<Cart>(context);
+    // return DraggableScrollableSheet(
+    //   initialChildSize: 1,
+    //   maxChildSize: 1,
+    //   minChildSize: 0.5,
+    //   builder: (context, scrollController) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
@@ -42,21 +51,16 @@ class CartBottomSheet extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
-        Text('Your Order', style: headerStyle),
-        RaisedButton.icon(
-          icon: Icon(Icons.delete_forever),
-          color: Colors.red,
-          shape: StadiumBorder(),
-          splashColor: Colors.white60,
-          onPressed: cart.clearCart,
-          textColor: Colors.white,
-          label: Text('Clear'),
+        Text(
+          'Your Order',
+          style: titleStyle,
         ),
+        IconButton(icon: Icon(Icons.delete), onPressed: cart.clearCart)
       ],
     );
   }
 
-  Widget buildItemsList(MyCart cart) {
+  Widget buildItemsList(Cart cart) {
     return Expanded(
       child: ListView.builder(
         itemCount: cart.cartItems.length,
@@ -64,11 +68,10 @@ class CartBottomSheet extends StatelessWidget {
         itemBuilder: (context, index) {
           return Card(
             child: ListTile(
-              leading: CircleAvatar(
-                  backgroundImage: NetworkImage('$BASE_URL/uploads/${cart.cartItems[index].food.images[0]}')),
-              title: Text('${cart.cartItems[index].food.name}', style: subtitleStyle),
+              leading: CircleAvatar(backgroundImage: NetworkImage(cart.cartItems[index].food.image)),
+              title: Text('${cart.cartItems[index].food.name}', style: titleStyle4),
               subtitle: Text('\$ ${cart.cartItems[index].food.price}'),
-              trailing: Text('x ${cart.cartItems[index].quantity}', style: subtitleStyle),
+              trailing: Text('x ${cart.cartItems[index].quantity}'),
             ),
           );
         },
@@ -84,25 +87,25 @@ class CartBottomSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            Text('You don\'t have any order yet!!', style: titleStyle2),
+            Text('No items in cart!!', style: titleStyle2),
             SizedBox(height: 16),
-            Icon(Icons.remove_shopping_cart, size: 40),
+            Icon(Icons.remove_shopping_cart, size: 64),
           ],
         ),
       ),
     );
   }
 
-  Widget buildPriceInfo(MyCart cart) {
+  Widget buildPriceInfo(Cart cart) {
     double total = 0;
-    for (CartItem cartModel in cart.cartItems) {
+    for (CartModel cartModel in cart.cartItems) {
       total += cartModel.food.price * cartModel.quantity;
     }
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
-        Text('Total:', style: headerStyle),
-        Text('\$ ${total.toStringAsFixed(2)}', style: headerStyle),
+        Text('Total:', style: titleStyle2),
+        Text('\$ ${total.toStringAsFixed(2)}', style: titleStyle),
       ],
     );
   }
@@ -110,7 +113,7 @@ class CartBottomSheet extends StatelessWidget {
   Widget addToCardButton(cart, context) {
     return Center(
       child: RaisedButton(
-        child: Text('CheckOut', style: titleStyle),
+        child: Text('Add to Cart', style: titleStyle1),
         onPressed: cart.cartItems.length == 0
             ? null
             : () {
